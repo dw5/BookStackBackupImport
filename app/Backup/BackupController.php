@@ -6,6 +6,7 @@ use BookStack\Activity\ActivityType;
 use BookStack\Http\Controller;
 use BookStack\Permissions\Permission;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Request as RequestFacade;
 
 class BackupController extends Controller
 {
@@ -22,11 +23,19 @@ class BackupController extends Controller
         $this->checkPermission(Permission::SettingsManage);
         $this->setPageTitle(trans('settings.backup_title'));
 
-        $files = $this->backups->listBackups();
+        $sort = RequestFacade::query('sort', 'date');
+        $order = RequestFacade::query('order', 'desc');
+
+        $sort = in_array($sort, ['name', 'size', 'date']) ? $sort : 'date';
+        $order = in_array($order, ['asc', 'desc']) ? $order : 'desc';
+
+        $files = $this->backups->listBackups($sort, $order);
 
         return view('settings.backups', [
             'files' => $files,
             'uploadLimit' => config('app.upload_limit', 50),
+            'sort' => $sort,
+            'order' => $order,
         ]);
     }
 

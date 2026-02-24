@@ -30,16 +30,31 @@
                 @if(count($files) > 0)
                     <div class="item-list">
                         <div class="item-list-row flex-container-row items-center px-s bold hide-under-l">
-                            <div class="flex-3 px-m py-xs">{{ trans('common.name') }}</div>
-                            <div class="flex px-m py-xs">{{ trans('settings.backup_size') }}</div>
-                            <div class="flex-2 px-m py-xs">{{ trans('settings.backup_date') }}</div>
+                            <div class="flex-3 px-m py-xs">
+                                <a href="{{ url('/settings/backups?sort=name&order=' . ($sort === 'name' && $order === 'asc' ? 'desc' : 'asc')) }}">
+                                    {{ trans('common.name') }}
+                                    @if($sort === 'name') @icon($order === 'asc' ? 'sort-up' : 'sort-down') @endif
+                                </a>
+                            </div>
+                            <div class="flex px-m py-xs">
+                                <a href="{{ url('/settings/backups?sort=size&order=' . ($sort === 'size' && $order === 'asc' ? 'desc' : 'asc')) }}">
+                                    {{ trans('settings.backup_size') }}
+                                    @if($sort === 'size') @icon($order === 'asc' ? 'sort-up' : 'sort-down') @endif
+                                </a>
+                            </div>
+                            <div class="flex-2 px-m py-xs">
+                                <a href="{{ url('/settings/backups?sort=date&order=' . ($sort === 'date' && $order === 'asc' ? 'desc' : 'asc')) }}">
+                                    {{ trans('settings.backup_date') }}
+                                    @if($sort === 'date') @icon($order === 'asc' ? 'sort-up' : 'sort-down') @endif
+                                </a>
+                            </div>
                             <div class="flex px-m py-xs text-right"></div>
                         </div>
 
                         @foreach($files as $file)
                             <div class="item-list-row flex-container-row items-center px-s wrap">
                                 <div class="flex-3 px-m py-xs min-width-m">
-                                    @icon('file') {{ $file['filename'] }}
+                                    <a href="{{ url('/settings/backups/download/' . $file['filename']) }}">{{ $file['filename'] }}</a>
                                 </div>
                                 <div class="flex px-m py-xs min-width-xs">
                                     <strong class="hide-over-l">{{ trans('settings.backup_size') }}:<br></strong>
@@ -62,7 +77,8 @@
                                         <div component="dropdown" class="dropdown-container">
                                             <button type="button" refs="dropdown@toggle"
                                                     aria-haspopup="true" aria-expanded="false"
-                                                    class="button outline small icon text-warn"
+                                                    class="button small icon"
+                                                    style="background-color: #f89c12; color: #FFF; fill: #FFF; border-color: #f89c12;"
                                                     title="{{ trans('settings.backup_restore_button') }}">
                                                 @icon('history')
                                                 <span class="screen-reader-only">{{ trans('settings.backup_restore_button') }}</span>
@@ -83,7 +99,8 @@
                                         <div component="dropdown" class="dropdown-container">
                                             <button type="button" refs="dropdown@toggle"
                                                     aria-haspopup="true" aria-expanded="false"
-                                                    class="button outline small icon text-neg"
+                                                    class="button small icon"
+                                                    style="background-color: var(--color-negative); color: #FFF; fill: #FFF; border-color: var(--color-negative);"
                                                     title="{{ trans('common.delete') }}">
                                                 @icon('delete')
                                                 <span class="screen-reader-only">{{ trans('common.delete') }}</span>
@@ -116,17 +133,33 @@
             <div class="card content-wrap auto-height sticky-top-m">
                 <h2 class="list-heading">{{ trans('settings.backup_upload') }}</h2>
                 <p class="small text-muted mb-m">{{ trans('settings.backup_upload_desc') }}</p>
-                <form method="POST" action="{{ url('/settings/backups/upload') }}" enctype="multipart/form-data">
+                <form component="backup-upload"
+                      option:backup-upload:max-size="{{ $uploadLimit }}"
+                      method="POST" action="{{ url('/settings/backups/upload') }}" enctype="multipart/form-data">
                     {!! csrf_field() !!}
                     <div class="mb-m">
                         <label class="button outline" style="cursor: pointer;">
                             @icon('attach') {{ trans('settings.backup_upload_select_file') }}
-                            <input type="file" name="file" accept=".zip" required style="display: none;">
+                            <input type="file" name="file" accept=".zip" required
+                                   refs="backup-upload@fileInput" style="display: none;">
                         </label>
                     </div>
+                    <p refs="backup-upload@fileInfo"
+                       class="small text-muted mb-xs"
+                       data-error-too-large="{{ trans('settings.backup_upload_file_too_large', ['size' => $uploadLimit]) }}"
+                       style="display: none;"></p>
                     <p class="small text-muted mb-m">{{ trans('settings.backup_upload_max_size', ['size' => $uploadLimit . ' MB']) }}</p>
-                    <button class="button outline">@icon('upload') {{ trans('settings.backup_upload_button') }}</button>
+                    <p class="small text-muted mb-m">{!! trans('settings.backup_storage_path', ['path' => 'storage/backups']) !!}</p>
+                    <button refs="backup-upload@uploadButton" class="button outline" disabled>
+                        @icon('upload') {{ trans('settings.backup_upload_button') }}
+                    </button>
                 </form>
+            </div>
+
+            <div class="card content-wrap auto-height mt-m">
+                <h2 class="list-heading text-warn">@icon('warning') {{ trans('settings.backup_restore_warnings') }}</h2>
+                <p class="small text-muted mb-xs">{{ trans('settings.backup_restore_logout_warn') }}</p>
+                <p class="small text-muted">{{ trans('settings.backup_restore_timeout_warn') }}</p>
             </div>
         </div>
 

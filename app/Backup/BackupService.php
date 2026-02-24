@@ -18,7 +18,7 @@ class BackupService
     /**
      * List all backup ZIP files with metadata.
      */
-    public function listBackups(): array
+    public function listBackups(string $sort = 'date', string $order = 'desc'): array
     {
         $files = Storage::disk($this->disk)->files($this->backupDir);
         $backups = [];
@@ -42,7 +42,16 @@ class BackupService
             ];
         }
 
-        usort($backups, fn ($a, $b) => $b['modified_at'] <=> $a['modified_at']);
+        $sortField = match ($sort) {
+            'name' => 'filename',
+            'size' => 'filesize_raw',
+            default => 'modified_at',
+        };
+
+        usort($backups, function ($a, $b) use ($sortField, $order) {
+            $cmp = $a[$sortField] <=> $b[$sortField];
+            return $order === 'asc' ? $cmp : -$cmp;
+        });
 
         return $backups;
     }

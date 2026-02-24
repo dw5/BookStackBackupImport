@@ -7,6 +7,7 @@ export {AttachmentsList} from './attachments-list';
 export {AutoSuggest} from './auto-suggest';
 export {AutoSubmit} from './auto-submit';
 export {BackToTop} from './back-to-top';
+export {BackupUpload} from './backup-upload';
 export {BookSort} from './book-sort';
 export {ChapterContents} from './chapter-contents';
 export {CodeEditor} from './code-editor';

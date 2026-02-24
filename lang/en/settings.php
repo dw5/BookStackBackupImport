@@ -396,4 +396,9 @@ return [
     'backup_upload_success' => 'Backup file uploaded successfully.',
     'backup_upload_max_size' => 'Max file size: :size',
     'backup_upload_select_file' => 'Select File',
+    'backup_upload_file_too_large' => 'Selected file exceeds the maximum upload size of :size MB.',
+    'backup_restore_warnings' => 'Restore Warnings',
+    'backup_restore_logout_warn' => 'All existing users, including you, will be logged out once a restore is complete.',
+    'backup_restore_timeout_warn' => 'Very large backups may time out during restore and may need to be run via command line.',
+    'backup_storage_path' => 'Backups are stored in <code>:path</code>',
 ];
