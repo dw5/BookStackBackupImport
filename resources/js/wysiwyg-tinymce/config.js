@@ -261,7 +261,7 @@ export function buildForEditor(options) {
         relative_urls: false,
         language: options.language,
         directionality: options.textDirection,
-        remove_script_host: false,
+        remove_script_host: true,
         document_base_url: window.baseUrl('/'),
         end_container_on_empty_block: true,
         remove_trailing_brs: false,

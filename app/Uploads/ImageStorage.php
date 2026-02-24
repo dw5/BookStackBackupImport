@@ -148,7 +148,7 @@ class ImageStorage
             }
         }
 
-        $basePath = $storageUrl ?: url('/');
+        $basePath = $storageUrl ?: '';
 
         return rtrim($basePath, '/');
     }
