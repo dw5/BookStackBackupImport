@@ -2,6 +2,7 @@
 
 namespace BookStack\Backup;
 
+use BookStack\Users\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,12 @@ class BackupService
 {
     protected string $disk = 'backup';
     protected string $backupDir = 'bookstack-backups';
+
+    protected array $allowedExtensions = [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg',
+        'pdf', 'txt', 'csv', 'xml',
+        'zip', 'tar', 'gz',
+    ];
 
     /**
      * List all backup ZIP files with metadata.
@@ -121,10 +128,11 @@ class BackupService
 
     /**
      * Restore from a backup ZIP file.
-     * Finds the SQL dump inside the ZIP, pipes it through the mysql CLI,
-     * then extracts upload files to their correct locations.
+     * Wipes the database, restores SQL with filtering, restores files with
+     * extension validation and SVG sanitization, recreates the current user
+     * if missing, and clears all sessions.
      */
-    public function restoreFromBackup(string $filename): array
+    public function restoreFromBackup(string $filename, ?User $currentUser = null): array
     {
         $path = $this->getBackupPath($filename);
         if (!$path) {
@@ -143,7 +151,21 @@ class BackupService
             return ['success' => false, 'message' => 'No SQL dump file found in backup.'];
         }
 
-        // Restore database via mysql CLI
+        // Save current user info before destructive operations
+        $userData = null;
+        if ($currentUser) {
+            $userData = [
+                'name' => $currentUser->name,
+                'email' => $currentUser->email,
+                'password' => $currentUser->password,
+                'slug' => $currentUser->slug,
+            ];
+        }
+
+        // Wipe the database to remove orphaned tables
+        Artisan::call('db:wipe', ['--force' => true]);
+
+        // Restore database via mysql CLI with SQL filtering
         $dbResult = $this->restoreDatabase($za, $sqlFile);
         if (!$dbResult['success']) {
             $za->close();
@@ -151,19 +173,46 @@ class BackupService
             return $dbResult;
         }
 
-        // Restore uploaded files
-        $filesRestored = $this->restoreFiles($za);
-
-        $za->close();
+        $filteredCount = $dbResult['filtered_count'] ?? 0;
 
         // Run migrations to ensure schema is current
         Artisan::call('migrate', ['--force' => true]);
         $migrationOutput = Artisan::output();
 
+        // Restore uploaded files with validation
+        [$filesRestored, $filesSkipped] = $this->restoreFiles($za);
+
+        $za->close();
+
+        // Recreate current user if missing from restored database
+        $userRecreated = false;
+        if ($userData) {
+            $userExists = DB::table('users')->where('email', $userData['email'])->exists();
+            if (!$userExists) {
+                DB::table('users')->insert([
+                    'name' => $userData['name'],
+                    'email' => $userData['email'],
+                    'password' => $userData['password'],
+                    'slug' => $userData['slug'],
+                    'email_confirmed' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                Log::warning("Restored admin user: {$userData['email']}");
+                $userRecreated = true;
+            }
+        }
+
+        // Clear all sessions and remember tokens
+        $this->clearSessions();
+
         return [
             'success' => true,
             'message' => 'Restore completed successfully.',
             'files_restored' => $filesRestored,
+            'files_skipped' => $filesSkipped,
+            'sql_filtered' => $filteredCount,
+            'user_recreated' => $userRecreated,
             'migration_output' => $migrationOutput,
         ];
     }
@@ -185,7 +234,7 @@ class BackupService
 
     /**
      * Restore the database from the SQL file inside the ZIP.
-     * Uses the mysql CLI tool to pipe the SQL directly.
+     * Uses the mysql CLI tool with SQL statement filtering.
      */
     protected function restoreDatabase(ZipArchive $za, string $sqlFile): array
     {
@@ -237,17 +286,16 @@ class BackupService
         stream_set_blocking($pipes[1], false);
         stream_set_blocking($pipes[2], false);
 
-        $bytesRead = 0;
-        while (($buffer = fgets($sqlStream, 1024 * 1024)) !== false) {
-            $bytesRead += strlen($buffer);
-            $written = fwrite($pipes[0], $buffer);
-            if ($written === false) {
-                break;
-            }
-        }
+        // Filter SQL statements through SqlStreamFilter
+        $filter = new SqlStreamFilter($sqlStream, $pipes[0]);
+        $filteredCount = $filter->pipe();
 
         fclose($pipes[0]);
         fclose($sqlStream);
+
+        if ($filteredCount > 0) {
+            Log::info("SQL restore: {$filteredCount} statement(s) filtered out.");
+        }
 
         $stdout = stream_get_contents($pipes[1]);
         fclose($pipes[1]);
@@ -263,23 +311,26 @@ class BackupService
             return ['success' => false, 'message' => 'Database import failed: ' . $stderr];
         }
 
-        Log::info("Database restore complete. {$bytesRead} bytes read.");
+        Log::info("Database restore complete.");
 
-        return ['success' => true];
+        return ['success' => true, 'filtered_count' => $filteredCount];
     }
 
     /**
      * Restore uploaded files from the ZIP archive.
-     * Maps ZIP paths back to BookStack's upload directories.
+     * Validates file extensions and sanitizes SVG content.
+     *
+     * Returns [filesRestored, filesSkipped].
      */
-    protected function restoreFiles(ZipArchive $za): int
+    protected function restoreFiles(ZipArchive $za): array
     {
         $restoreDirs = [
             'storage/uploads/' => storage_path('uploads'),
             'public/uploads/'  => public_path('uploads'),
         ];
 
-        $count = 0;
+        $restored = 0;
+        $skipped = 0;
 
         for ($i = 0; $i < $za->numFiles; $i++) {
             $name = $za->getNameIndex($i);
@@ -293,6 +344,15 @@ class BackupService
                 $pos = strpos($name, $zipPrefix);
                 if ($pos !== false) {
                     $relativePath = substr($name, $pos + strlen($zipPrefix));
+                    $extension = strtolower(pathinfo($relativePath, PATHINFO_EXTENSION));
+
+                    // Validate file extension
+                    if (!in_array($extension, $this->allowedExtensions)) {
+                        Log::warning("Restore: skipped file with disallowed extension: {$name}");
+                        $skipped++;
+                        break;
+                    }
+
                     $destPath = $localBase . '/' . $relativePath;
                     $destDir = dirname($destPath);
 
@@ -302,13 +362,21 @@ class BackupService
 
                     $stream = $za->getStream($name);
                     if ($stream !== false) {
-                        $destFile = fopen($destPath, 'w');
-                        while (($buffer = fgets($stream, 1024 * 1024)) !== false) {
-                            fwrite($destFile, $buffer);
+                        if ($extension === 'svg') {
+                            // Read full content, sanitize, then write
+                            $content = stream_get_contents($stream);
+                            fclose($stream);
+                            $content = $this->sanitizeSvg($content);
+                            file_put_contents($destPath, $content);
+                        } else {
+                            $destFile = fopen($destPath, 'w');
+                            while (($buffer = fgets($stream, 1024 * 1024)) !== false) {
+                                fwrite($destFile, $buffer);
+                            }
+                            fclose($destFile);
+                            fclose($stream);
                         }
-                        fclose($destFile);
-                        fclose($stream);
-                        $count++;
+                        $restored++;
                     }
 
                     break;
@@ -316,7 +384,61 @@ class BackupService
             }
         }
 
-        return $count;
+        if ($skipped > 0) {
+            Log::warning("Restore: {$skipped} file(s) skipped due to disallowed extensions.");
+        }
+
+        return [$restored, $skipped];
+    }
+
+    /**
+     * Sanitize SVG content by removing script elements and on* event attributes.
+     */
+    protected function sanitizeSvg(string $content): string
+    {
+        $dom = new \DOMDocument();
+        $prevUseErrors = libxml_use_internal_errors(true);
+        $loaded = @$dom->loadXML($content);
+        libxml_clear_errors();
+        libxml_use_internal_errors($prevUseErrors);
+
+        if (!$loaded) {
+            return $content;
+        }
+
+        // Remove script elements
+        $scripts = $dom->getElementsByTagName('script');
+        while ($scripts->length > 0) {
+            $scripts->item(0)->parentNode->removeChild($scripts->item(0));
+        }
+
+        // Remove on* event attributes from all elements
+        $xpath = new \DOMXPath($dom);
+        foreach ($xpath->query('//@*[starts-with(name(), "on")]') as $attr) {
+            $attr->ownerElement->removeAttribute($attr->name);
+        }
+
+        return $dom->saveXML();
+    }
+
+    /**
+     * Clear all sessions and remember tokens to force re-authentication.
+     */
+    protected function clearSessions(): void
+    {
+        // Clear all remember tokens
+        DB::table('users')->update(['remember_token' => null]);
+
+        // Delete session files (file driver)
+        $sessionPath = storage_path('framework/sessions');
+        if (is_dir($sessionPath)) {
+            $files = glob($sessionPath . '/*');
+            foreach ($files as $file) {
+                if (is_file($file)) {
+                    unlink($file);
+                }
+            }
+        }
     }
 
     /**

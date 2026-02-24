@@ -128,14 +128,19 @@ class BackupController extends Controller
 
         $this->logActivity(ActivityType::MAINTENANCE_ACTION_RUN, 'backup-restore');
 
-        $result = $this->backups->restoreFromBackup($filename);
+        $result = $this->backups->restoreFromBackup($filename, auth()->user());
 
         if ($result['success']) {
-            $this->showSuccessNotification(trans('settings.backup_restore_success'));
+            // Force logout current session after successful restore
+            auth()->logout();
+            session()->invalidate();
+            session()->regenerateToken();
+
+            return redirect('/login')->with('success', trans('settings.backup_restore_success'));
         } else {
             $this->showErrorNotification($result['message']);
-        }
 
-        return redirect('/settings/backups');
+            return redirect('/settings/backups');
+        }
     }
 }

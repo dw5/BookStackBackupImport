@@ -401,4 +401,7 @@ return [
     'backup_restore_logout_warn' => 'All existing users, including you, will be logged out once a restore is complete.',
     'backup_restore_timeout_warn' => 'Very large backups may time out during restore and may need to be run via command line.',
     'backup_storage_path' => 'Backups are stored in <code>:path</code>',
+    'backup_restore_file_skipped' => 'Skipped :count file(s) with disallowed extensions during restore.',
+    'backup_restore_sql_filtered' => ':count SQL statement(s) were filtered out during restore.',
+    'backup_restore_user_recreated' => 'Your user account was recreated in the restored database.',
 ];

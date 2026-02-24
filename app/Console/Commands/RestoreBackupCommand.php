@@ -36,11 +36,23 @@ class RestoreBackupCommand extends Command
 
         $this->info('Restoring from backup: ' . $filename);
 
-        $result = $backups->restoreFromBackup($filename);
+        $result = $backups->restoreFromBackup($filename, null);
 
         if ($result['success']) {
             $this->info('Restore completed successfully.');
             $this->info('Files restored: ' . ($result['files_restored'] ?? 0));
+
+            if (($result['files_skipped'] ?? 0) > 0) {
+                $this->warn('Files skipped (disallowed extension): ' . $result['files_skipped']);
+            }
+
+            if (($result['sql_filtered'] ?? 0) > 0) {
+                $this->warn('SQL statements filtered out: ' . $result['sql_filtered']);
+            }
+
+            if (!empty($result['user_recreated'])) {
+                $this->warn('Note: No user was recreated (CLI mode has no authenticated user).');
+            }
 
             if (!empty($result['migration_output'])) {
                 $this->line($result['migration_output']);
