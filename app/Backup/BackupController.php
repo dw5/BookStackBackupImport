@@ -26,6 +26,7 @@ class BackupController extends Controller
 
         return view('settings.backups', [
             'files' => $files,
+            'uploadLimit' => config('app.upload_limit', 50),
         ]);
     }
 

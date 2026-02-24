@@ -385,6 +385,7 @@ return [
     'backup_date' => 'Date Created',
     'backup_restore_button' => 'Restore',
     'backup_restore_confirm' => 'Are you sure you want to restore from this backup? This will replace the current database and uploaded files. This action cannot be undone!',
+    'backup_restore_warn' => 'This will replace your current database and files.',
     'backup_restore_success' => 'Backup restored successfully. You may need to log in again.',
     'backup_delete_confirm' => 'Are you sure you want to delete this backup?',
     'backup_delete_success' => 'Backup deleted successfully.',
@@ -393,4 +394,6 @@ return [
     'backup_upload_desc' => 'Upload a previously created BookStack backup ZIP file.',
     'backup_upload_button' => 'Upload Backup',
     'backup_upload_success' => 'Backup file uploaded successfully.',
+    'backup_upload_max_size' => 'Max file size: :size',
+    'backup_upload_select_file' => 'Select File',
 ];
