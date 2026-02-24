@@ -16,7 +16,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        //
+        $schedule->command('bookstack:backup')->weekly();
+        $schedule->command('backup:clean')->daily();
     }
 
     /**

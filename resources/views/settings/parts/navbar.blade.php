@@ -3,6 +3,7 @@
     @if(userCan(\BookStack\Permissions\Permission::SettingsManage))
         <a href="{{ url('/settings') }}" @if($selected == 'settings') class="active" @endif>@icon('settings'){{ trans('settings.settings') }}</a>
         <a href="{{ url('/settings/maintenance') }}" @if($selected == 'maintenance') class="active" @endif>@icon('spanner'){{ trans('settings.maint') }}</a>
+        <a href="{{ url('/settings/backups') }}" @if($selected == 'backups') class="active" @endif>@icon('export'){{ trans('settings.backup_title') }}</a>
     @endif
     @if(userCan(\BookStack\Permissions\Permission::SettingsManage) && userCan(\BookStack\Permissions\Permission::UsersManage))
         <a href="{{ url('/settings/audit') }}" @if($selected == 'audit') class="active" @endif>@icon('open-book'){{ trans('settings.audit') }}</a>

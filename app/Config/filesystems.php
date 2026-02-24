@@ -51,6 +51,12 @@ return [
             'throw'      => true,
         ],
 
+        'backup' => [
+            'driver' => 'local',
+            'root'   => storage_path('backups'),
+            'throw'  => true,
+        ],
+
         's3' => [
             'driver'                  => 's3',
             'key'                     => env('STORAGE_S3_KEY', 'your-key'),

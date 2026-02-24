@@ -371,4 +371,26 @@ return [
         'zh_TW' => '繁體中文',
     ],
     //!////////////////////////////////
+
+    // Backups
+    'backup_title' => 'Backups',
+    'backup_create' => 'Create Backup',
+    'backup_create_desc' => 'Create a full system backup including the database and all uploaded files. This can take time depending on the size of your instance.',
+    'backup_create_button' => 'Create New Backup',
+    'backup_create_success' => 'Backup created successfully!',
+    'backup_create_failure' => 'Backup creation failed. Check the logs for details.',
+    'backup_list' => 'Existing Backups',
+    'backup_none' => 'No backups found.',
+    'backup_size' => 'Size',
+    'backup_date' => 'Date Created',
+    'backup_restore_button' => 'Restore',
+    'backup_restore_confirm' => 'Are you sure you want to restore from this backup? This will replace the current database and uploaded files. This action cannot be undone!',
+    'backup_restore_success' => 'Backup restored successfully. You may need to log in again.',
+    'backup_delete_confirm' => 'Are you sure you want to delete this backup?',
+    'backup_delete_success' => 'Backup deleted successfully.',
+    'backup_file_not_found' => 'Backup file not found.',
+    'backup_upload' => 'Upload Backup',
+    'backup_upload_desc' => 'Upload a previously created BookStack backup ZIP file.',
+    'backup_upload_button' => 'Upload Backup',
+    'backup_upload_success' => 'Backup file uploaded successfully.',
 ];

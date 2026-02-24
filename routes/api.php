@@ -9,6 +9,7 @@
 use BookStack\Activity\Controllers as ActivityControllers;
 use BookStack\Api\ApiDocsController;
 use BookStack\App\SystemApiController;
+use BookStack\Backup as BackupControllers;
 use BookStack\Entities\Controllers as EntityControllers;
 use BookStack\Exports\Controllers as ExportControllers;
 use BookStack\Permissions\ContentPermissionApiController;
@@ -114,3 +115,9 @@ Route::post('users', [UserApiController::class, 'create']);
 Route::get('users/{id}', [UserApiController::class, 'read']);
 Route::put('users/{id}', [UserApiController::class, 'update']);
 Route::delete('users/{id}', [UserApiController::class, 'delete']);
+
+Route::get('backups', [BackupControllers\BackupApiController::class, 'list']);
+Route::post('backups', [BackupControllers\BackupApiController::class, 'create']);
+Route::get('backups/download/latest', [BackupControllers\BackupApiController::class, 'downloadLatest']);
+Route::get('backups/download/{filename}', [BackupControllers\BackupApiController::class, 'downloadFile']);
+Route::delete('backups/{filename}', [BackupControllers\BackupApiController::class, 'delete']);

@@ -6,6 +6,7 @@ use BookStack\Api\ApiDocsController;
 use BookStack\Api\UserApiTokenController;
 use BookStack\App\HomeController;
 use BookStack\App\MetaController;
+use BookStack\Backup as BackupControllers;
 use BookStack\Entities\Controllers as EntityControllers;
 use BookStack\Exports\Controllers as ExportControllers;
 use BookStack\Http\Middleware\VerifyCsrfToken;
@@ -231,6 +232,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/settings/maintenance/cleanup-images', [SettingControllers\MaintenanceController::class, 'cleanupImages']);
     Route::post('/settings/maintenance/send-test-email', [SettingControllers\MaintenanceController::class, 'sendTestEmail']);
     Route::post('/settings/maintenance/regenerate-references', [SettingControllers\MaintenanceController::class, 'regenerateReferences']);
+
+    // Backups
+    Route::get('/settings/backups', [BackupControllers\BackupController::class, 'index']);
+    Route::post('/settings/backups', [BackupControllers\BackupController::class, 'create']);
+    Route::get('/settings/backups/download/{filename}', [BackupControllers\BackupController::class, 'downloadFile']);
+    Route::delete('/settings/backups/{filename}', [BackupControllers\BackupController::class, 'delete']);
+    Route::post('/settings/backups/upload', [BackupControllers\BackupController::class, 'upload']);
+    Route::post('/settings/backups/restore/{filename}', [BackupControllers\BackupController::class, 'restore']);
 
     // Recycle Bin
     Route::get('/settings/recycle-bin', [EntityControllers\RecycleBinController::class, 'index']);

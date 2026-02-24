@@ -39,6 +39,7 @@
         "socialiteproviders/microsoft-azure": "^5.1",
         "socialiteproviders/okta": "^4.2",
         "socialiteproviders/twitch": "^5.3",
+        "spatie/laravel-backup": "^9.3",
         "ssddanbrown/htmldiff": "^2.0.0",
         "xemlock/htmlpurifier-html5": "^0.1.12"
     },
